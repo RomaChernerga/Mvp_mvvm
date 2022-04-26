@@ -7,8 +7,7 @@ import com.example.mvp_mvvm.domain.LoginUseCase
 
 class LoginUseCaseImpl(
     // нам для раюоты нужны api и uiHandler
-    private val api : LoginAPI,
-    private val uiHandler: Handler
+    private val api : LoginAPI
 ): LoginUseCase {
     override fun login(
         login: String,
@@ -17,9 +16,8 @@ class LoginUseCaseImpl(
     ) {
         Thread {
             val result = api.login(login, password)
-            uiHandler.post {
-                callback(result)
-            }
+            callback(result)
+
         }.start()
     }
 }

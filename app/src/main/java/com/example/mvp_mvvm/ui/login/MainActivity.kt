@@ -11,37 +11,61 @@ import android.widget.Toast
 import androidx.annotation.MainThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import com.example.mvp_mvvm.App
 import com.example.mvp_mvvm.app
-import com.example.mvp_mvvm.data.LoginUseCaseImpl
 import com.example.mvp_mvvm.databinding.ActivityMainBinding
-import com.example.mvp_mvvm.domain.LoginAPI
-import com.example.mvp_mvvm.domain.LoginUseCase
 
 
-class MainActivity : AppCompatActivity(), LoginContract.View {
+class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private var presenter: LoginContract.Presenter? = null
+    private var viewModel: LoginContract.ViewModel? = null
+    private val handler: Handler by lazy {Handler(Looper.getMainLooper())}
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        presenter = restorePresenter()
-        presenter?.onAttach(this)
+        viewModel = restoreViewModel()
+
 
         binding.btnEnter.setOnClickListener {
-            presenter?.onLogin(
+            viewModel?.onLogin(
                 binding.loginEditText.text.toString(),
                 binding.passwordEditText.text.toString()
             )
         }
+        viewModel?.shouldShowProgress?.subscribe(handler) { shouldShow ->
+            if(shouldShow == true) {
+                showProgress()
+            } else {
+                hideProgress()
+            }
+        }
+        viewModel?.isSuccess?.subscribe(handler) {
+            if(it == true) {
+                setSuccess()
+            }
+        }
+        viewModel?.errorText?.subscribe(handler) {
+            it?.let {
+                val success = viewModel?.isSuccess?.value
+                if (success == false) {
+                    setError(it)
+                }
+            }
+        }
     }
 
-    private fun restorePresenter(): LoginPresenter {
-        val presenter =  lastCustomNonConfigurationInstance as? LoginPresenter
-        return presenter ?: LoginPresenter(app.loginUseCase)
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel?.isSuccess?.unSubscribeAll()
+        viewModel?.errorText?.unSubscribeAll()
+        viewModel?.shouldShowProgress?.unSubscribeAll()
+    }
+
+    private fun restoreViewModel(): LoginViewModel {
+        val viewModel =  lastCustomNonConfigurationInstance as? LoginViewModel
+        return viewModel ?: LoginViewModel(app.loginUseCase)
     }
 
     // Метод чтобы взять объект
@@ -51,29 +75,28 @@ class MainActivity : AppCompatActivity(), LoginContract.View {
 
     // Метод чтобы положить объект
     override fun onRetainCustomNonConfigurationInstance(): Any? {
-        return presenter
+        return viewModel
     }
 
     @MainThread
-    override fun setSuccess() {
+    private fun setSuccess() {
 
         binding.btnEnter.isVisible = false
         binding.loginEditText.isVisible = false
         binding.passwordEditText.isVisible = false
         binding.root.setBackgroundColor(Color.GREEN)
-
     }
     @MainThread
-    override fun setError(error: String) {
+    private fun setError(error: String) {
         Toast.makeText(this, "ERROR $error", Toast.LENGTH_SHORT).show()
     }
-    @MainThread
-    override fun showProgress() {
+
+    private fun showProgress() {
         binding.btnEnter.isEnabled = false
         hideKeyboard(this)
     }
-    @MainThread
-    override fun hideProgress() {
+
+    private fun hideProgress() {
         binding.btnEnter.isEnabled = true
     }
 
@@ -81,7 +104,7 @@ class MainActivity : AppCompatActivity(), LoginContract.View {
 //        return Handler(Looper.getMainLooper())
 //    }
 
-    fun hideKeyboard(activity: Activity) {
+    private fun hideKeyboard(activity: Activity) {
         val imm: InputMethodManager =
             activity.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         //Find the currently focused view, so we can grab the correct window token from it.

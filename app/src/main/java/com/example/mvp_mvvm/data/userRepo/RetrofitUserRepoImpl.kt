@@ -1,9 +1,9 @@
-package com.example.mvp_mvvm.data
+package com.example.mvp_mvvm.data.userRepo
 
 import com.example.mvp_mvvm.domain.UserRepo
 import com.example.mvp_mvvm.domain.entities.UserProfile
 
-class RoomkUserRepoImpl: UserRepo {
+class RetrofitUserRepoImpl: UserRepo {
     override fun addUser(user: UserProfile) {
         TODO("Not yet implemented")
     }
